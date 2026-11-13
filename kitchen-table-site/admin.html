@@ -1,0 +1,29 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Kitchen Orders</title><style>
+:root{--bg:#6b4a2b;--pg:#e0d3b8;--card:#efe4cc;--ink:#3a2615;--mut:#6d5538;--ac:#a63d2f;--bd:#8a6a45}
+@media(prefers-color-scheme:dark){:root{--bg:#1e1610;--pg:#2c2118;--card:#3a2c1f;--ink:#f1e4c8;--mut:#c4ab82;--ac:#e3735f;--bd:#6e5436}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:22px/1.25 "Courier New",monospace}main{max-width:900px;margin:0 auto;padding:16px}
+h1{font-size:20px;background:var(--pg);border:4px solid var(--bd);padding:14px;margin:0 0 12px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+button{font:14px monospace;font-weight:700;cursor:pointer;border:3px solid var(--bd);background:var(--card);color:var(--ink);padding:8px 12px}button.p{background:var(--ac);color:#fff}
+.tabs{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}.tabs .on{background:var(--ac);color:#fff}
+.o{background:var(--pg);border:4px solid var(--bd);padding:12px;margin-bottom:12px}.o.new{border-color:var(--ac)}.o.delivered,.o.cancelled{opacity:.6}
+.h{display:flex;justify-content:space-between;gap:8px;font-weight:700}.m{color:var(--mut);font-size:16px}.s{font-size:15px;background:var(--ink);color:var(--pg);padding:2px 8px}
+ul{margin:8px 0;padding-left:20px}.b{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}input{font:20px monospace;padding:8px;width:100%;max-width:320px}</style></head><body><main>
+<h1><span>Kitchen Orders</span><span id="ct" class="m"></span></h1><div id="app"></div></main><script>
+var pw=sessionStorage.getItem('pw')||'',tab='active',data=[],NEXT={new:['preparing','Start'],preparing:['ready','Ready'],ready:['delivered','Delivered']};
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function api(path,opt){opt=opt||{};opt.headers={'content-type':'application/json','x-admin':pw};return fetch(path,opt)}
+function login(){document.getElementById('app').innerHTML='<div class="o"><p>Admin password</p><input id="pw" type="password"> <button class="p" id="go">LOG IN</button><p id="er" class="m"></p></div>';
+document.getElementById('go').onclick=function(){pw=document.getElementById('pw').value;load(true)}}
+function load(f){api('/api/orders').then(function(r){if(r.status===401){sessionStorage.removeItem('pw');if(f)login();else login();if(f)document.getElementById('er').textContent='Wrong password.';return}
+return r.json().then(function(d){sessionStorage.setItem('pw',pw);data=d;draw()})}).catch(function(){})}
+function draw(){var act=data.filter(function(o){return o.status==='new'||o.status==='preparing'||o.status==='ready'}),list=tab==='active'?act:data;
+document.getElementById('ct').textContent=act.length+' open';
+var h='<div class="tabs"><button data-t="active" class="'+(tab==='active'?'on':'')+'">OPEN ('+act.length+')</button><button data-t="all" class="'+(tab==='all'?'on':'')+'">ALL ('+data.length+')</button></div>';
+if(!list.length)h+='<div class="o">No orders yet.</div>';
+list.forEach(function(o){var n=NEXT[o.status];h+='<div class="o '+o.status+'"><div class="h"><span>#'+o.id+' \u00b7 '+esc(o.name)+'</span><span class="s">'+o.status.toUpperCase()+'</span></div><div class="m">'+new Date(o.created).toLocaleString()+'</div><ul>'+o.items.map(function(i){return'<li>'+i.q+' \u00d7 '+esc(i.n)+' <span class="m">('+i.p*i.q+' iron)</span></li>'}).join('')+'</ul><div class="h"><span class="m">incl. 1 iron tax</span><span>Total: '+o.total+' iron</span></div><div class="b">'+(n?'<button class="p" data-id="'+o.id+'" data-s="'+n[0]+'">'+n[1]+'</button>':'')+(o.status==='new'||o.status==='preparing'||o.status==='ready'?'<button data-id="'+o.id+'" data-s="cancelled">Cancel</button>':'')+'<button data-id="'+o.id+'" data-d="1">Delete</button></div></div>'});
+document.getElementById('app').innerHTML=h}
+document.getElementById('app').onclick=function(e){var b=e.target.closest('button');if(!b)return;
+if(b.dataset.t){tab=b.dataset.t;draw()}else if(b.dataset.s)api('/api/orders/'+b.dataset.id,{method:'PATCH',body:JSON.stringify({status:b.dataset.s})}).then(function(){load()});
+else if(b.dataset.d&&confirm('Delete order #'+b.dataset.id+'?'))api('/api/orders/'+b.dataset.id,{method:'DELETE'}).then(function(){load()})};
+if(pw)load();else login();setInterval(function(){if(pw&&!document.hidden)load()},8000);
+</script></body></html>
