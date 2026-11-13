@@ -1,0 +1,19 @@
+
+{
+  "$schema": "https://developers.cloudflare.com/workers/wrangler/config-schema.json",
+  "name": "minecraftfood",
+  "main": "src/index.js",
+  "compatibility_date": "2026-11-12",
+  "assets": {
+    "directory": "./",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "minecraft-orders",
+      "database_id": "14a45236-681e-4e5c-bc02-ec26528ee39c"
+    }
+  ]
+}
